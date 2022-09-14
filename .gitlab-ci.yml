@@ -1,0 +1,168 @@
+image: docker:latest
+services:
+  - docker:dind
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -T 1C"
+  SAST_IMAGE_SUFFIX: '-fips'
+
+stages:
+  - build
+  - test
+  - docker-build
+  - scan
+
+java-build:
+  image: maven:3-openjdk-11
+  stage: build
+  script: "mvn $MAVEN_CLI_OPTS clean package -Dmaven.test.skip=true"
+  artifacts:
+    paths:
+      - admin-server/target/*.jar
+      - config-server/target/*.jar
+      - eureka-discovery-service/target/*.jar
+      - gateway-service/target/*.jar
+      - user-management-service/target/*.jar
+  cache:
+    key: java-cache
+    paths:
+      - .m2/repository
+
+angular-build:
+  image: node:lts
+  stage: build
+  script:
+    - cd angular-client
+    - npm install
+    - node_modules/@angular/cli/bin/ng build --prod
+  cache:
+    key: angular-cache
+    paths:
+      - angular-client/dist
+      - angular-client/node_modules
+
+react-build:
+  image: node:lts
+  stage: build
+  script:
+    - cd react-client
+    - yarn install
+    - yarn build
+  cache:
+    key: react-cache
+    paths:
+      - react-client/build
+      - react-client/node_modules
+
+test:
+  image: maven:3-openjdk-11
+  stage: test
+  script: "mvn $MAVEN_CLI_OPTS clean verify"
+  artifacts:
+    reports:
+      junit:
+        - admin-server/target/surefire-reports/TEST-*.xml
+        - config-server/target/surefire-reports/TEST-*.xml
+        - eureka-discovery-service/target/surefire-reports/TEST-*.xml
+        - gateway-service/target/surefire-reports/TEST-*.xml
+        - user-management-service/target/surefire-reports/TEST-*.xml
+
+docker-build:
+  stage: docker-build
+  script:
+    - docker version
+    - docker-compose version
+    - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+    - docker-compose build --pull
+    - docker-compose push
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+include:
+  - template: Security/Container-Scanning.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+
+sast:
+  stage: test
+  variables:
+    SAST_EXCLUDED_ANALYZERS: "semgrep"
+    MAVEN_CLI_OPTS: "--batch-mode -Dmaven.test.skip=true --errors --fail-at-end --show-version -T 1C"
+  artifacts:
+    paths:
+      - gl-sast-report.json
+
+container_scanning:
+  stage: scan
+  rules:
+    - when: never
+  variables:
+    GITLAB_FEATURES: "container_scanning"
+    DOCKER_USER: $DOCKER_USER
+    DOCKER_PASSWORD: $DOCKER_PASSWORD
+  artifacts:
+    paths:
+      - gl-container-scanning-report.json
+
+admin_server_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/admin-server:0.0.1-SNAPSHOT"
+
+config_server_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/config-server:0.0.1-SNAPSHOT"
+
+eureka_discovery_service_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/eureka-discovery-service:0.0.1-SNAPSHOT"
+
+gateway_service_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/gateway-service:0.0.1-SNAPSHOT"
+
+user_management_service_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/user-management-service:0.0.1-SNAPSHOT"
+
+nginx_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/nginx:0.0.1-SNAPSHOT"
+
+angular_client_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/angular-client:0.0.1-SNAPSHOT"
+
+react_client_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/react-client:0.0.1-SNAPSHOT"
+
+prometheus_container_scanning:
+  extends: container_scanning
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_IMAGE: "mariobros/prometheus:0.0.1-SNAPSHOT"

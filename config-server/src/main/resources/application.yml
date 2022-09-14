@@ -1,0 +1,40 @@
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active:
+      - native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations:
+          - file://${user.home}/config-data
+
+eureka:
+  client:
+    fetch-registry: false
+    serviceUrl:
+      defaultZone: http://eureka-discovery-service:8761/eureka
+  instance:
+    preferIpAddress: true
+
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      enabled: true
+    info:
+      enabled: true
+    prometheus:
+      enabled: true
+

@@ -1,0 +1,9 @@
+scrape_configs:
+  - job_name: 'Demo Applications'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['eureka-discovery-service:8761']
+      - targets: ['config-server:8080']
+      - targets: ['admin-server:8080']
+      - targets: ['gateway-service:8080']
+      - targets: ['user-management-service:8080']

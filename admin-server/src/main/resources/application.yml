@@ -1,0 +1,38 @@
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+spring:
+  application:
+    name: admin-server
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
+
+eureka:
+  client:
+    register-with-eureka: false
+    registry-fetch-interval-seconds: 5
+    serviceUrl:
+      defaultZone: http://eureka-discovery-service:8761/eureka
+  instance:
+    preferIpAddress: true
+
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      enabled: true
+    info:
+      enabled: true
+    prometheus:
+      enabled: true

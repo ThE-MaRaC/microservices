@@ -1,0 +1,18 @@
+<mat-toolbar color="primary" class="app-header">
+  <div><a href="https://angular.io" target="_blank" class="angular">Angular</a></div>
+  <span class="nav-tool-items">
+    <a mat-button mat-raised-button (click)="logout()" *ngIf="userService.isLoggedIn">Logout</a>
+    <a mat-button routerLink="login" routerLinkActive="active" *ngIf="!userService.isLoggedIn"
+      >Login</a
+    >
+    <a
+      mat-button
+      mat-raised-button
+      routerLink="register"
+      routerLinkActive="active"
+      *ngIf="!userService.isLoggedIn"
+      >Register</a
+    >
+  </span>
+</mat-toolbar>
+<router-outlet></router-outlet>

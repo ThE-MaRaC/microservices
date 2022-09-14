@@ -1,0 +1,45 @@
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+spring:
+  application:
+    name: gateway-service
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
+    gateway:
+      routes:
+        - id: user-management-service
+          uri: lb://user-management-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=2
+
+eureka:
+  client:
+    registry-fetch-interval-seconds: 5
+    serviceUrl:
+      defaultZone: http://eureka-discovery-service:8761/eureka
+  instance:
+    preferIpAddress: true
+
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      enabled: true
+    info:
+      enabled: true
+    prometheus:
+      enabled: true

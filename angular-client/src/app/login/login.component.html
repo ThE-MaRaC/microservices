@@ -1,0 +1,66 @@
+<div class="login-wrapper" fxLayout="row" fxLayoutAlign="center center">
+  <div class="example-loading-shade" *ngIf="isLoadingResults">
+    <mat-spinner *ngIf="isLoadingResults"></mat-spinner>
+  </div>
+  <mat-card class="box">
+    <mat-card-header>
+      <mat-card-title>Log in</mat-card-title>
+    </mat-card-header>
+    <form [formGroup]="loginForm" (ngSubmit)="onFormSubmit(loginForm.value)" class="example-form">
+      <mat-card-content>
+        <mat-form-field class="example-full-width">
+          <input
+            matInput
+            type="username"
+            placeholder="Username"
+            formControlName="username"
+            [errorStateMatcher]="matcher"
+            autoComplete="username"
+          />
+          <mat-error>
+            <span *ngIf="!loginForm.get('username').valid && loginForm.get('username').touched"
+              >Please enter your username</span
+            >
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field class="example-full-width">
+          <input
+            matInput
+            type="password"
+            placeholder="Password"
+            formControlName="password"
+            [errorStateMatcher]="matcher"
+            autoComplete="current-password"
+          />
+          <mat-error>
+            <span *ngIf="!loginForm.get('password').valid && loginForm.get('password').touched"
+              >Please enter your password</span
+            >
+          </mat-error>
+        </mat-form-field>
+      </mat-card-content>
+      <div class="button-row">
+        <button
+          type="submit"
+          [disabled]="!loginForm.valid"
+          mat-stroked-button
+          color="primary"
+          class="btn-block"
+        >
+          Log in
+        </button>
+      </div>
+      <div class="button-row">
+        <button
+          type="button"
+          mat-stroked-button
+          color="secondary"
+          class="btn-block"
+          (click)="register()"
+        >
+          Register
+        </button>
+      </div>
+    </form>
+  </mat-card>
+</div>

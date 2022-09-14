@@ -1,0 +1,242 @@
+version: '3.8'
+
+services:
+  eureka-discovery-service:
+    container_name: eureka-discovery-service
+    build:
+      context: eureka-discovery-service
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.0.1-SNAPSHOT"
+    image: mariobros/eureka-discovery-service:0.0.1-SNAPSHOT
+    restart: always
+    ports:
+      - "8761:8761"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  config-server:
+    container_name: config-server
+    build:
+      context: config-server
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.0.1-SNAPSHOT"
+    image: mariobros/config-server:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - eureka-discovery-service
+    ports:
+      - "8888:8080"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  admin-server:
+    container_name: admin-server
+    build:
+      context: admin-server
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.0.1-SNAPSHOT"
+    image: mariobros/admin-server:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - config-server
+    ports:
+      - "9000:8080"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  gateway-service:
+    container_name: gateway-service
+    build:
+      context: gateway-service
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.0.1-SNAPSHOT"
+    image: mariobros/gateway-service:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - config-server
+    ports:
+      - "8765:8080"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  user-management-service:
+    container_name: user-management-service
+    build:
+      context: user-management-service
+      dockerfile: Dockerfile
+      args:
+        VERSION: "0.0.1-SNAPSHOT"
+    image: mariobros/user-management-service:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - config-server
+    ports:
+      - "8080:8080"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  nginx:
+    container_name: nginx
+    build:
+      context: nginx
+      dockerfile: Dockerfile
+    image: mariobros/nginx:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - gateway-service
+      - angular-client
+      - react-client
+    ports:
+      - "80:80"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  angular-client:
+    container_name: angular-client
+    build:
+      context: angular-client
+      dockerfile: Dockerfile
+    image: mariobros/angular-client:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - gateway-service
+    ports:
+      - "81:80"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  react-client:
+    container_name: react-client
+    build:
+      context: react-client
+      dockerfile: Dockerfile
+    image: mariobros/react-client:0.0.1-SNAPSHOT
+    restart: always
+    depends_on:
+      - gateway-service
+    ports:
+      - "82:80"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  prometheus:
+    container_name: prometheus
+    build:
+      context: prometheus
+      dockerfile: Dockerfile
+    image: mariobros/prometheus:0.0.1-SNAPSHOT
+    restart: always
+    ports:
+      - "9090:9090"
+    networks:
+      - microservice
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 30s
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    networks:
+      - microservice
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:alpine
+    command: -H unix:///var/run/docker.sock --admin-password='$$2y$$05$$EvNrR6rAjdbzeVvsgLF67OVTfGsxCoPC/Ruc2xkHCsQwUgwvDEdL.'
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider http://localhost:9000 || exit 1"]
+      interval: 30s
+      timeout: 30s
+    ports:
+      - "9999:9000"
+    networks:
+      - microservice
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+networks:
+  microservice:
+    name: microservice
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br_microservice
